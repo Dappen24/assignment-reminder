@@ -29,7 +29,8 @@
   #drop.over { border-color: var(--accent); }
   .row { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; margin-bottom: 10px; }
   .row.nophone { border-color: var(--bad); background: var(--bad-bg); }
-  .row.sent { opacity: .55; }
+  .row.sent { opacity: .75; }
+  .row.confirmed { opacity: .5; }
   .head { display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; }
   .role { font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .03em; }
   .name { font-weight: 600; }
@@ -60,7 +61,7 @@
   <div class="bar" id="weekBar" hidden>
     <select id="week"></select>
     <span id="summary" class="muted"></span>
-    <button id="resetSent" type="button">Clear ✓ marks</button>
+    <button id="resetSent" type="button">Clear marks</button>
   </div>
 
   <div id="list"></div>
@@ -72,11 +73,12 @@
     <p><button id="resetTemplates" type="button">Restore defaults</button>
        <button id="resetAliases" type="button">Forget name picks</button></p>
   </details>
+  <p class="muted">v2 · sent + confirmed tracking</p>
 </main>
 
 <script src="vendor/pdf.worker.min.js"></script>
 <script src="vendor/pdf.min.js"></script>
-<script src="lib.js"></script>
-<script src="app.js"></script>
+<script src="lib.js?v=2"></script>
+<script src="app.js?v=2"></script>
 </body>
 </html>

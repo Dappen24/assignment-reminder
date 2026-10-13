@@ -16,6 +16,9 @@ blocks all network requests (CSP `connect-src 'none'`). pdf.js 3.11.174 is vendo
 1. Export the midweek schedule PDF from Hourglass.
 2. Open the page and choose the PDF.
 3. Tap **Send** on each row → Messages opens with the text filled in → send.
+   After sending, the row shows ✓ Sent with the time; tick **Confirmed** when they reply. Marks are
+   kept only for the weeks in the loaded PDF. If you don't see Confirmed, you're on a cached copy:
+   reload, or remove and re-add the Home Screen icon (the footer should say v2).
    Red rows have no phone in Hourglass; fix them there and re-import.
 
 ## Optional (Mac)

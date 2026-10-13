@@ -12,7 +12,8 @@
   };
 
   let contacts = store.get('contacts', null);
-  let weeks = [];
+  // Parsed schedule is kept too, so reopening the page shows the week with its sent/confirmed marks.
+  let weeks = store.get('weeks', []).map(w => ({ ...w, date: new Date(w.date) }));
   const edits = new Map(); // message text edited by hand, per week+row, until the next PDF
 
   pdfjsLib.GlobalWorkerOptions.workerSrc = 'vendor/pdf.worker.min.js';
@@ -39,6 +40,8 @@
 
   // ---------- PDF ----------
 
+  const weekKey = w => w.date.toISOString().slice(0, 10);
+
   async function loadPdf(file) {
     const doc = await pdfjsLib.getDocument({
       data: new Uint8Array(await file.arrayBuffer()), disableFontFace: true, isEvalSupported: false,
@@ -52,9 +55,19 @@
         items: text.items.map(it => ({ str: it.str, x: it.transform[4], y: it.transform[5] })),
       });
     }
-    weeks = AR.parseWeeks(AR.toLines(pages));
+    const parsed = AR.parseWeeks(AR.toLines(pages));
+    if (!parsed.length) { alert('No midweek meeting found in that PDF.'); return; }
+    weeks = parsed;
     edits.clear();
-    if (!weeks.length) { alert('No midweek meeting found in that PDF.'); return; }
+    store.set('weeks', weeks);
+    // Past weeks are disposable: keep marks only for weeks in this PDF.
+    const kept = {}, all = store.get('sent', {});
+    for (const w of weeks) if (all[weekKey(w)]) kept[weekKey(w)] = all[weekKey(w)];
+    store.set('sent', kept);
+    showWeeks();
+  }
+
+  function showWeeks() {
     const today = new Date(); today.setHours(0, 0, 0, 0);
     const next = weeks.findIndex(w => w.date >= today);
     $('week').replaceChildren(...weeks.map((w, i) =>
@@ -77,7 +90,6 @@
 
   // ---------- list ----------
 
-  const weekKey = w => w.date.toISOString().slice(0, 10);
 
   function roleLabel(rem) {
     const a = rem.assignment;
@@ -102,6 +114,7 @@
     const templates = store.get('templates', {});
     const sentAll = store.get('sent', {});
     const sent = sentAll[weekKey(week)] || {};
+    const mark = id => (sent[id] === true ? { at: 0 } : sent[id]); // true = older save format
     const rems = AR.toReminders(week);
     let ready = 0;
 
@@ -113,7 +126,7 @@
       const phone = person && person.phone;
       if (phone) ready++;
 
-      const row = el('div', { className: 'row' + (phone ? '' : ' nophone') + (sent[rem.id] ? ' sent' : '') });
+      const row = el('div', { className: 'row' + (phone ? '' : ' nophone') + (mark(rem.id) ? ' sent' : '') + (mark(rem.id)?.confirmed ? ' confirmed' : '') });
       const actions = el('div', { className: 'actions' });
       const head = el('div', { className: 'head' },
         el('span', { className: 'role', textContent: roleLabel(rem) }),
@@ -134,14 +147,23 @@
         actions.append(el('span', { className: 'flag', textContent: 'No phone in Hourglass' }));
       } else {
         const link = el('a', { className: 'send', href: AR.smsLink(phone, text), textContent: 'Send' });
-        link.addEventListener('click', () => {
+        const saveMark = patch => {
           const all = store.get('sent', {});
-          all[weekKey(week)] = { ...(all[weekKey(week)] || {}), [rem.id]: true };
+          const wk = all[weekKey(week)] = all[weekKey(week)] || {};
+          wk[rem.id] = { ...(wk[rem.id] === true ? { at: 0 } : wk[rem.id]), ...patch };
           store.set('sent', all);
-          row.classList.add('sent');
-          if (!actions.querySelector('.check')) actions.prepend(el('span', { className: 'check', textContent: '✓' }));
-        });
-        if (sent[rem.id]) actions.append(el('span', { className: 'check', textContent: '✓' }));
+        };
+        const setMark = patch => { saveMark(patch); render(); };
+        const m = mark(rem.id);
+        // Save before Messages opens (iOS may suspend the page); redraw once the page is visible again.
+        link.addEventListener('click', () => { saveMark({ at: Date.now() }); setTimeout(render, 0); });
+        if (m) {
+          const when = m.at ? ' ' + new Date(m.at).toLocaleString([], { weekday: 'short', hour: 'numeric', minute: '2-digit' }) : '';
+          actions.append(el('span', { className: 'check', textContent: '✓ Sent' + when }));
+          const box = el('input', { type: 'checkbox', checked: !!m.confirmed });
+          box.addEventListener('change', () => setMark({ confirmed: box.checked ? Date.now() : null }));
+          actions.append(el('label', { className: 'muted' }, box, ' Confirmed'));
+        }
         actions.append(el('span', { className: 'muted', textContent: phone }), link);
         row.link = link;
       }
@@ -155,8 +177,9 @@
       return row;
     }));
 
-    const sentCount = rems.filter(r => sent[r.id]).length;
-    $('summary').textContent = `${rems.length} people · ${ready} with phone · ${sentCount} sent`;
+    const sentCount = rems.filter(r => mark(r.id)).length;
+    const confCount = rems.filter(r => mark(r.id)?.confirmed).length;
+    $('summary').textContent = `${rems.length} people · ${ready} with phone · ${sentCount} sent · ${confCount} confirmed`;
   }
 
   $('resetSent').addEventListener('click', () => {
@@ -191,4 +214,6 @@
 
   showContactStatus();
   renderTemplates();
+  if (weeks.length) showWeeks();
+  window.addEventListener('pageshow', e => { if (e.persisted) render(); });
 })();
