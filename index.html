@@ -23,6 +23,7 @@
   label.btn, button, a.send { display: inline-block; border: 1px solid var(--line); background: var(--card);
          color: var(--fg); border-radius: 8px; padding: 7px 12px; font: inherit; cursor: pointer; text-decoration: none; }
   a.send { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+  a.send.wa { background: #1fa855; border-color: #1fa855; margin-left: 6px; }
   input[type=file] { display: none; }
   select { font: inherit; padding: 5px; border-radius: 6px; }
   #drop { border: 2px dashed var(--line); border-radius: 12px; padding: 28px; text-align: center; margin: 12px 0 20px; }
@@ -73,7 +74,7 @@
     <p><button id="resetTemplates" type="button">Restore defaults</button>
        <button id="resetAliases" type="button">Forget name picks</button></p>
   </details>
-  <p class="muted">v2 · sent + confirmed tracking</p>
+  <p class="muted">v4 · WhatsApp button</p>
 </main>
 
 <script src="vendor/pdf.worker.min.js"></script>

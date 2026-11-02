@@ -133,6 +133,19 @@
         el('span', { className: 'name', textContent: person ? person.fullname : rem.name }),
         actions);
 
+      // A hand-picked match can be undone so the row asks again.
+      if (person && aliases[rem.name] === person.fullname) {
+        const undo = el('button', { type: 'button', className: 'muted', textContent: 'Change' });
+        undo.addEventListener('click', () => {
+          const a = store.get('aliases', {});
+          delete a[rem.name];
+          store.set('aliases', a);
+          edits.delete(key);
+          render();
+        });
+        head.insertBefore(undo, actions);
+      }
+
       if (!person) {
         const pick = el('select', {}, new Option(`“${rem.name}” not found. Pick a contact…`, ''),
           ...[...people].sort((a, b) => a.fullname.localeCompare(b.fullname)).map(c => new Option(c.fullname, c.fullname)));
@@ -147,6 +160,8 @@
         actions.append(el('span', { className: 'flag', textContent: 'No phone in Hourglass' }));
       } else {
         const link = el('a', { className: 'send', href: AR.smsLink(phone, text), textContent: 'Send' });
+        const wa = el('a', { className: 'send wa', href: AR.whatsappLink(phone, text), textContent: 'WhatsApp',
+          target: '_blank', rel: 'noopener' });
         const saveMark = patch => {
           const all = store.get('sent', {});
           const wk = all[weekKey(week)] = all[weekKey(week)] || {};
@@ -156,7 +171,7 @@
         const setMark = patch => { saveMark(patch); render(); };
         const m = mark(rem.id);
         // Save before Messages opens (iOS may suspend the page); redraw once the page is visible again.
-        link.addEventListener('click', () => { saveMark({ at: Date.now() }); setTimeout(render, 0); });
+        for (const a of [link, wa]) a.addEventListener('click', () => { saveMark({ at: Date.now() }); setTimeout(render, 0); });
         if (m) {
           const when = m.at ? ' ' + new Date(m.at).toLocaleString([], { weekday: 'short', hour: 'numeric', minute: '2-digit' }) : '';
           actions.append(el('span', { className: 'check', textContent: '✓ Sent' + when }));
@@ -164,14 +179,15 @@
           box.addEventListener('change', () => setMark({ confirmed: box.checked ? Date.now() : null }));
           actions.append(el('label', { className: 'muted' }, box, ' Confirmed'));
         }
-        actions.append(el('span', { className: 'muted', textContent: phone }), link);
-        row.link = link;
+        actions.append(el('span', { className: 'muted', textContent: phone }), link, wa);
+        row.link = link; row.wa = wa;
       }
 
       const area = el('textarea', { rows: 3, value: text });
       area.addEventListener('input', () => {
         edits.set(key, area.value);
         if (row.link) row.link.href = AR.smsLink(phone, area.value);
+        if (row.wa) row.wa.href = AR.whatsappLink(phone, area.value);
       });
       row.append(head, area);
       return row;

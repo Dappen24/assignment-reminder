@@ -192,10 +192,12 @@
   // Apple Messages wants sms:<number>&body=…; Android wants sms:<number>?body=…
   const isAndroid = typeof navigator !== 'undefined' && /Android/i.test(navigator.userAgent);
   const smsLink = (phone, body) => `sms:${phone}${isAndroid ? '?' : '&'}body=${encodeURIComponent(body)}`;
+  // wa.me wants the number as digits only, country code included (phones are stored as +1XXXXXXXXXX).
+  const whatsappLink = (phone, body) => `https://wa.me/${phone.replace(/\D/g, '')}?text=${encodeURIComponent(body)}`;
 
   const api = {
     DEFAULT_TEMPLATES, toLines, parseWeeks, toReminders, parseCSV, toContacts,
-    normalizePhone, matchContact, buildMessage, formatDate, smsLink,
+    normalizePhone, matchContact, buildMessage, formatDate, smsLink, whatsappLink,
   };
   if (typeof module === 'object' && module.exports) module.exports = api;
   else root.AR = api;
